@@ -15,7 +15,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.4",
     "mypy>=2.4.0",
+    "nbstripout>=0.9.1",
     "pytest>=9.1.1",
     "ruff>=0.17.1",
 ]
