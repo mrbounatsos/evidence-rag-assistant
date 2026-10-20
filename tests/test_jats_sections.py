@@ -16,6 +16,7 @@ ARTICLE = """
   <front><article-meta>
     <title-group><article-title>A <italic>test</italic> article</article-title></title-group>
     <abstract><title>Abstract</title><p>Abstract text.</p></abstract>
+    <abstract abstract-type="summary"><p>Plain summary.</p></abstract>
     <abstract abstract-type="graphical"><p>Graphical summary.</p></abstract>
   </article-meta></front>
   <body>
@@ -30,6 +31,8 @@ ARTICLE = """
           <caption><title>Overview.</title><p>Details.</p></caption></fig></p>
       </sec>
       <table-wrap><label>Table 1</label></table-wrap>
+    <boxed-text><caption><title>Key point.</title></caption><p>Box text.</p></boxed-text>
+      <disp-formula><label>(1)</label></disp-formula>
     </sec>
     <sec sec-type="ack"><title>Thanks to colleagues</title><p>Thanks.</p></sec>
     <sec><title>5 Funding</title><p>Funded by a grant.</p></sec>
@@ -48,11 +51,14 @@ def test_extract_article_keeps_content() -> None:
     assert blocks == [
         Block("title", (), "A test article"),
         Block("abstract", ("Abstract",), "Abstract text."),
+        Block("abstract", ("Summary",), "Plain summary."),
         Block("paragraph", (), "Untitled opening."),
         Block("paragraph", ("1. Introduction",), "Intro text."),
         Block("paragraph", ("1. Introduction",), "A list item."),
         Block("paragraph", ("Results", "Binding"), "Binding text."),
         Block("caption", ("Results", "Binding"), "Figure 1: Overview. Details."),
+        Block("caption", ("Results",), "Key point."),
+        Block("paragraph", ("Results",), "Box text."),
     ]
 
 
@@ -61,12 +67,24 @@ def test_extract_article_records_skips() -> None:
     assert [skip.reason for skip in skips] == [
         "typed_abstract",
         "table_not_extracted",
+        "formula_not_extracted",
         "sec_type:ack",
         "title:funding",
         "contains_ref_list",
         "title:associated data",
         "in_back",
     ]
+
+
+def test_article_without_body_is_recorded() -> None:
+    root = ET.fromstring(
+        "<article><front><article-meta><title-group>"
+        "<article-title>Only metadata</article-title>"
+        "</title-group></article-meta></front></article>"
+    )
+    blocks, skips = extract_article(root)
+    assert blocks == [Block("title", (), "Only metadata")]
+    assert [skip.reason for skip in skips] == ["no_body"]
 
 
 @pytest.mark.parametrize(
@@ -78,6 +96,7 @@ def test_extract_article_records_skips() -> None:
         ("  Data   Availability ", "data availability"),
         ("3D structure prediction", "3d structure prediction"),
         ("V. cholerae infection", "v. cholerae infection"),
+        ("Publisher’s Note", "publisher's note"),
     ],
 )
 def test_normalize_title(title: str, expected: str) -> None:

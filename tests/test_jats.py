@@ -65,6 +65,15 @@ from evidence_rag_assistant.ingestion.jats import block_text
             "Spread over lines.",
             id="whitespace-collapsed",
         ),
+        pytest.param(
+            r"<p>Affinity <inline-formula><alternatives><tex-math>"
+            r"\documentclass{minimal}\begin{document}$K_D$\end{document}"
+            r'</tex-math><mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML">'
+            r"<mml:mi>K</mml:mi><mml:mi>D</mml:mi></mml:math></alternatives>"
+            r"</inline-formula> values.</p>",
+            "Affinity KD values.",
+            id="latex-alternative-skipped",
+        ),
     ],
 )
 def test_block_text(xml: str, expected: str) -> None:

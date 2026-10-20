@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 # Elements nested inside a block that are not part of its prose.
 # Figure and table captions are extracted separately.
-_SKIP_INSIDE_TEXT = frozenset({"fig", "table-wrap"})
+_SKIP_INSIDE_TEXT = frozenset({"fig", "table-wrap", "tex-math"})
 
 _NUMERIC_CITATION = re.compile(r"^[\s\d,;\-–—\[\]()]+$")
 _EMPTY_BRACKETS = re.compile(r"[\[(][\s,;\-–—]*[\])]")
@@ -82,7 +82,7 @@ SKIP_SEC_TYPES = frozenset(
     }
 )
 
-# Normalized titles of non-content sections (from the corpus survey).
+# Normalized titles of non-content sections (from the corpus surveys).
 SKIP_TITLES = frozenset(
     {
         "references",
@@ -91,28 +91,45 @@ SKIP_TITLES = frozenset(
         "funding",
         "funding statement",
         "author contributions",
+        "authors' contributions",
         "credit authorship contribution statement",
         "contributors",
         "contributor information",
         "data availability",
         "data availability statement",
+        "data accessibility",
         "data and materials availability",
+        "code availability",
         "conflict of interest",
         "conflicts of interest",
+        "conflict of interest declaration",
         "declaration of competing interest",
         "competing interests",
         "disclosure statement",
         "declarations",
+        "declaration of ai use",
+        "generative ai statement",
         "consent",
+        "ethics",
+        "ethics approval",
+        "animal research statement",
+        "publisher's note",
         "abbreviations",
         "footnotes",
         "supplementary material",
         "supplementary materials",
         "supplementary information",
+        "supplementary data",
+        "supplemental material",
         "supporting information",
         "associated data",
     }
 )
+
+# Abstract types that are kept, and the section path they are stored under.
+# Untyped abstracts are kept as "Abstract"; all other types (graphical, toc,
+# web-summary) are short blurbs or images and are skipped.
+_KEPT_ABSTRACT_TYPES = {"primary": "Abstract", "summary": "Summary"}
 
 # Containers whose children are walked as if they were part of the section.
 _CONTAINERS = frozenset({"list", "list-item", "disp-quote", "boxed-text", "fig-group"})
@@ -142,13 +159,6 @@ class Skip:
     reason: str
 
 
-def normalize_title(title: str) -> str:
-    """Normalize a section title for matching: '2.1 Funding:' -> 'funding'."""
-    text = " ".join(title.lower().split())
-    text = _LEADING_NUMBERING.sub("", text)
-    return text.rstrip(" .:")
-
-
 def _title_of(element: ET.Element) -> str:
     title = element.find("title")
     return block_text(title) if title is not None else ""
@@ -173,15 +183,17 @@ def skip_reason(sec: ET.Element) -> str | None:
     return None
 
 
+def _caption_body(caption: ET.Element) -> str:
+    parts = [block_text(c) for c in caption if local_name(c.tag) in {"title", "p"}]
+    return " ".join(p for p in parts if p)
+
+
 def caption_text(fig: ET.Element) -> str:
     """Return a figure's label and caption, e.g. 'Figure 1: Overview. Details.'"""
     label_element = fig.find("label")
     label = block_text(label_element) if label_element is not None else ""
     caption = fig.find("caption")
-    parts = []
-    if caption is not None:
-        parts = [block_text(c) for c in caption if local_name(c.tag) in {"title", "p"}]
-    body = " ".join(p for p in parts if p)
+    body = _caption_body(caption) if caption is not None else ""
     if label and body:
         return f"{label}: {body}"
     return label or body
@@ -218,6 +230,11 @@ def _walk(
             _add(blocks, "caption", path, caption_text(child))
         elif name in _CONTAINERS:
             _walk(child, path, blocks, skips, paragraph_kind)
+        elif name == "caption":
+            # A caption outside a figure, e.g. the heading of a <boxed-text>.
+            _add(blocks, "caption", path, _caption_body(child))
+        elif name == "disp-formula":
+            skips.append(Skip(path, name, "", "formula_not_extracted"))
         elif name == "table-wrap":
             skips.append(Skip(path, name, _title_of(child), "table_not_extracted"))
         elif name not in _IGNORED:
@@ -236,14 +253,20 @@ def extract_article(root: ET.Element) -> tuple[list[Block], list[Skip]]:
             _add(blocks, "title", (), block_text(title))
         for abstract in meta.findall("abstract"):
             abstract_type = abstract.get("abstract-type")
-            if abstract_type:
-                skips.append(Skip((), "abstract", abstract_type, "typed_abstract"))
+            if abstract_type is None:
+                section = "Abstract"
             else:
-                _walk(abstract, ("Abstract",), blocks, skips, paragraph_kind="abstract")
+                section = _KEPT_ABSTRACT_TYPES.get(abstract_type, "")
+            if section:
+                _walk(abstract, (section,), blocks, skips, paragraph_kind="abstract")
+            else:
+                skips.append(Skip((), "abstract", abstract_type or "", "typed_abstract"))
 
     body = root.find("body")
     if body is not None:
         _walk(body, (), blocks, skips)
+    else:
+        skips.append(Skip((), "body", "", "no_body"))
 
     back = root.find("back")
     if back is not None:
@@ -251,3 +274,10 @@ def extract_article(root: ET.Element) -> tuple[list[Block], list[Skip]]:
             skips.append(Skip((), local_name(child.tag), _title_of(child), "in_back"))
 
     return blocks, skips
+
+
+def normalize_title(title: str) -> str:
+    """Normalize a section title for matching: '2.1 Funding:' -> 'funding'."""
+    text = " ".join(title.lower().replace("’", "'").split())
+    text = _LEADING_NUMBERING.sub("", text)
+    return text.rstrip(" .:")
