@@ -62,10 +62,15 @@ def licence_from_xml(root: ET.Element) -> tuple[str | None, str | None]:
     for element in root.iter():
         if local_name(element.tag) not in {"license", "license_ref"}:
             continue
-        for text in (element.get(XLINK_HREF) or "", "".join(element.itertext())):
-            licence = licence_from_url(text)
+        # A licence URL can sit on the element itself, in its text, or on a
+        # nested <ext-link xlink:href="...">, so check the whole subtree.
+        hrefs = [el.get(XLINK_HREF) for el in element.iter()]
+        text = " ".join(" ".join(element.itertext()).split())
+        for candidate in [*filter(None, hrefs), text]:
+            licence = licence_from_url(candidate)
             if licence:
-                return licence, " ".join(text.split())[:300]
+                evidence = text if candidate == text else f"{candidate} | {text}"
+                return licence, evidence[:300]
     return None, None
 
 
