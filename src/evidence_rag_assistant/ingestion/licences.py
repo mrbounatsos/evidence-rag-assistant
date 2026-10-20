@@ -9,6 +9,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
+from evidence_rag_assistant.ingestion.jats import local_name
+
 # Licences acceptable for local, non-redistributed use.
 # Article text never enters the public repository.
 ALLOWED_LICENCES = frozenset(
@@ -48,14 +50,10 @@ def licence_from_url(text: str) -> str | None:
     return "cc " + match.group("terms").lower()
 
 
-def _local_name(tag: str) -> str:
-    return tag.rsplit("}", 1)[-1]
-
-
 def licence_from_xml(root: ET.Element) -> tuple[str | None, str | None]:
     """Return (normalized licence, evidence string) from JATS licence elements."""
     for element in root.iter():
-        if _local_name(element.tag) not in {"license", "license_ref"}:
+        if local_name(element.tag) not in {"license", "license_ref"}:
             continue
         # A licence URL can sit on the element itself, in its text, or on a
         # nested <ext-link xlink:href="...">, so check the whole subtree.
