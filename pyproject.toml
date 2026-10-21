@@ -7,7 +7,10 @@ authors = [
     { name = "imunick", email = "nick@imunotx.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "faiss-cpu>=1.15.1",
+    "sentence-transformers>=6.1.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.3,<0.14.0"]
@@ -40,3 +43,7 @@ python_version = "3.12"
 mypy_path = "src"
 warn_return_any = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["faiss", "sentence_transformers", "sentence_transformers.*"]
+ignore_missing_imports = true
