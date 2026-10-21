@@ -75,12 +75,18 @@ def parse_choice(text: str, valid_letters: set[str]) -> str | None:
 
 
 def key_passage_hit(
-    key_passage: str, sources: list[RetrievedChunk], threshold: float = 0.8
-) -> bool:
-    """True if one chunk contains at least `threshold` of the key passage's words."""
+    key_passage: str | None, sources: list[RetrievedChunk], threshold: float = 0.8
+) -> bool | None:
+    """True if one chunk contains at least `threshold` of the key passage's words.
+
+    Returns None when the question has no key passage, so it can be left out
+    of the hit rate rather than counted as a miss.
+    """
+    if not key_passage:
+        return None
     words = set(_WORD.findall(key_passage.lower()))
     if not words:
-        return False
+        return None
     for source in sources:
         chunk_words = set(_WORD.findall(source.chunk["text"].lower()))
         if len(words & chunk_words) / len(words) >= threshold:
@@ -169,6 +175,8 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
             stats["mean_distinct_papers"] = mean(r["distinct_papers"] for r in rows)
         if mode == "rag":
             stats["source_hit_rate"] = mean(r["source_hit"] for r in rows)
-            stats["key_passage_hit_rate"] = mean(r["key_passage_hit"] for r in rows)
+            checked = [r["key_passage_hit"] for r in rows if r["key_passage_hit"] is not None]
+            stats["key_passage_hit_rate"] = mean(checked) if checked else None
+            stats["key_passage_checked"] = len(checked)
         summary[mode] = stats
     return summary

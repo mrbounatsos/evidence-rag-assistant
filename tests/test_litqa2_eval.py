@@ -32,3 +32,8 @@ def test_key_passage_hit_tolerates_small_differences() -> None:
     passage = "A. lwoffii only evolved resistance to ciprofloxacin"
     assert key_passage_hit(passage, [chunk("Unrelated text."), chunk(f"In contrast, {passage}.")])
     assert not key_passage_hit(passage, [chunk("A. lwoffii was grown overnight.")])
+
+
+def test_key_passage_hit_is_none_without_passage() -> None:
+    assert key_passage_hit(None, [chunk("Some text.")]) is None
+    assert key_passage_hit("", [chunk("Some text.")]) is None
