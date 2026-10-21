@@ -21,6 +21,7 @@ class RetrievedChunk:
 class Retriever:
     def __init__(self, chunks_path: Path = CHUNKS_PATH, index_dir: Path = INDEX_DIR):
         meta = json.loads((index_dir / "dense_meta.json").read_text(encoding="utf-8"))
+        self.meta: dict[str, Any] = meta
         raw = chunks_path.read_bytes()
         # True if the chunks changed after the index was built.
         self.stale = hashlib.sha256(raw).hexdigest() != meta["chunks_sha256"]
@@ -34,6 +35,18 @@ class Retriever:
         self.model = load_model(meta["model"])
         self.index = load_index(index_dir / "dense.faiss")
 
-    def retrieve(self, query: str, k: int = 5) -> list[RetrievedChunk]:
-        results = search(self.index, embed_query(self.model, query), k)
-        return [RetrievedChunk(self.chunks[self.chunk_ids[row]], score) for row, score in results]
+    def retrieve(
+        self, query: str, k: int = 5, exclude_pmcids: frozenset[str] = frozenset()
+    ) -> list[RetrievedChunk]:
+        """Return the k best chunks, optionally skipping chunks from some papers."""
+        # When excluding papers, search deeper so k chunks remain after filtering.
+        depth = k + 500 if exclude_pmcids else k
+        retrieved: list[RetrievedChunk] = []
+        for row, score in search(self.index, embed_query(self.model, query), depth):
+            chunk = self.chunks[self.chunk_ids[row]]
+            if chunk["pmcid"] in exclude_pmcids:
+                continue
+            retrieved.append(RetrievedChunk(chunk, score))
+            if len(retrieved) == k:
+                break
+        return retrieved
