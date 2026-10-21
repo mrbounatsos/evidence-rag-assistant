@@ -135,7 +135,7 @@ def run_question(
         exclude = frozenset(item["source_pmcids"]) if mode == "source_removed" else frozenset()
         sources = retriever.retrieve(item["question"], k, exclude_pmcids=exclude)
         pmcids = [s.chunk["pmcid"] for s in sources]
-        result["top_score"] = sources[0].score if sources else 0.0
+        result["top_score"] = max((s.score for s in sources), default=0.0)
         result["retrieved_chunk_ids"] = [s.chunk["chunk_id"] for s in sources]
         result["distinct_papers"] = len(set(pmcids))
         if mode == "rag":

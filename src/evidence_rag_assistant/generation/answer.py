@@ -116,7 +116,7 @@ def answer_question(
     min_score: float = MIN_RETRIEVAL_SCORE,
 ) -> Answer:
     sources = retriever.retrieve(question, k)
-    top_score = sources[0].score if sources else 0.0
+    top_score = max((s.score for s in sources), default=0.0)
     if top_score < min_score:
         return Answer(question, ABSTAIN_MESSAGE, "abstained_low_retrieval", top_score, sources)
 

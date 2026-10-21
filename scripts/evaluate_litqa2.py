@@ -13,7 +13,7 @@ from typing import Any
 
 from evidence_rag_assistant.evaluation.litqa2 import MODES, run_question, summarize
 from evidence_rag_assistant.generation.answer import MIN_RETRIEVAL_SCORE, OLLAMA_MODEL
-from evidence_rag_assistant.retrieval.retriever import Retriever
+from evidence_rag_assistant.retrieval.retriever import RETRIEVAL_MODES, Retriever
 
 BENCHMARK_PATH = Path("data/processed/litqa2_benchmark.jsonl")
 RESULTS_DIR = Path("experiments/results")
@@ -35,17 +35,18 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
+    parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default="dense")
     args = parser.parse_args()
 
     with BENCHMARK_PATH.open(encoding="utf-8") as handle:
         items = [json.loads(line) for line in handle if line.strip()]
     items = [item for item in items if item["split"] == args.split][: args.limit]
 
-    retriever = Retriever()
+    retriever = Retriever(mode=args.retrieval)
     if retriever.stale:
         sys.exit("The index is stale (chunks changed since it was built). Rebuild it first.")
 
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"_{args.split}"
+    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"_{args.split}_{args.retrieval}"
     run_dir = RESULTS_DIR / run_id
     run_dir.mkdir(parents=True)
     config = {
