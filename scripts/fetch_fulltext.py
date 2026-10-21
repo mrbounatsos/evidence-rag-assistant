@@ -17,7 +17,10 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-CANDIDATES_PATH = Path("data/raw/europe_pmc_candidates.jsonl")
+CANDIDATE_PATHS = (
+    Path("data/raw/europe_pmc_candidates.jsonl"),
+    Path("data/raw/litqa2_candidates.jsonl"),
+)
 FULLTEXT_DIR = Path("data/raw/fulltext")
 MANIFEST_PATH = Path("data/raw/fulltext_manifest.jsonl")
 API_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
@@ -86,6 +89,7 @@ def process(candidate: dict[str, Any]) -> dict[str, Any]:
     xml_path = FULLTEXT_DIR / f"{pmcid}.xml"
     entry: dict[str, Any] = {
         "pmcid": pmcid,
+        "source": candidate.get("source"),
         "metadata_licence": candidate.get("licence"),
         "xml_licence": None,
         "xml_licence_evidence": None,
@@ -135,11 +139,31 @@ def process(candidate: dict[str, Any]) -> dict[str, Any]:
     return entry
 
 
+def load_eligible_candidates() -> list[dict[str, Any]]:
+    """Candidates with a PMCID, full text in Europe PMC and an allowed index licence.
+
+    The index licence is only a first filter; the article's own XML decides.
+    A paper listed in several candidate files is fetched once.
+    """
+    eligible: dict[str, dict[str, Any]] = {}
+    for path in CANDIDATE_PATHS:
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                candidate = json.loads(line)
+                if (
+                    candidate.get("licence_ok")
+                    and candidate.get("pmcid")
+                    and candidate.get("in_epmc") == "Y"
+                ):
+                    eligible.setdefault(candidate["pmcid"], candidate)
+    return list(eligible.values())
+
+
 def main() -> None:
     FULLTEXT_DIR.mkdir(parents=True, exist_ok=True)
-    with CANDIDATES_PATH.open(encoding="utf-8") as handle:
-        candidates = [json.loads(line) for line in handle if line.strip()]
-    eligible = [c for c in candidates if c.get("licence_ok")]
+    eligible = load_eligible_candidates()
 
     statuses: Counter[str] = Counter()
     mismatches: list[str] = []
