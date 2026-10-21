@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from evidence_rag_assistant.dense_index import build_index, search
+from evidence_rag_assistant.indexing.dense_index import build_index, search
 
 
 def test_search_ranks_by_cosine_similarity() -> None:

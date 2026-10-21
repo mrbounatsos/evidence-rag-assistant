@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from evidence_rag_assistant.dense_index import (
+from evidence_rag_assistant.indexing.dense_index import (
     MODEL_NAME,
     build_index,
     embed_passages,

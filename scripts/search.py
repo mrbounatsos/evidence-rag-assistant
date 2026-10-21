@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from evidence_rag_assistant.dense_index import (
+from evidence_rag_assistant.indexing.dense_index import (
     embed_query,
     load_index,
     load_model,

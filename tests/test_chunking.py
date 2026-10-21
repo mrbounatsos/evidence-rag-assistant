@@ -1,6 +1,6 @@
 """Tests for chunking extracted blocks."""
 
-from evidence_rag_assistant.chunking import chunk_article
+from evidence_rag_assistant.indexing.chunking import chunk_article
 
 
 def block(index: int, kind: str, path: tuple[str, ...], text: str) -> dict[str, object]:

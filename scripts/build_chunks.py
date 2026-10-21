@@ -5,7 +5,7 @@ import statistics
 from dataclasses import asdict
 from pathlib import Path
 
-from evidence_rag_assistant.chunking import DEFAULT_MAX_WORDS, chunk_article
+from evidence_rag_assistant.indexing.chunking import DEFAULT_MAX_WORDS, chunk_article
 
 BLOCKS_PATH = Path("data/processed/blocks.jsonl")
 CHUNKS_PATH = Path("data/processed/chunks.jsonl")
