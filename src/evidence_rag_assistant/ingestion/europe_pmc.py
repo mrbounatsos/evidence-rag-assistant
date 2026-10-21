@@ -7,6 +7,15 @@ from urllib.request import Request, urlopen
 
 SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 USER_AGENT = "EvidenceRAG/0.1 (research portfolio)"
+DOI_PREFIX = "https://doi.org/"
+
+
+def normalize_doi(url: str) -> str:
+    """'https://doi.org/10.1128/MSphere.00109-24' -> '10.1128/msphere.00109-24'"""
+    doi = url.strip()
+    if doi.lower().startswith(DOI_PREFIX):
+        doi = doi[len(DOI_PREFIX) :]
+    return doi.lower()
 
 
 def search(query: str, page_size: int = 25, timeout: float = 30) -> list[dict[str, Any]]:

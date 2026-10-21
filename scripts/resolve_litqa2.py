@@ -12,21 +12,12 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from evidence_rag_assistant.ingestion.europe_pmc import journal_title, search
+from evidence_rag_assistant.ingestion.europe_pmc import journal_title, normalize_doi, search
 from evidence_rag_assistant.ingestion.licences import ALLOWED_LICENCES, normalize_licence
 
 LITQA2_DIR = Path("data/raw/lab-bench/LitQA2")
 OUTPUT_PATH = Path("data/raw/litqa2_candidates.jsonl")
-DOI_PREFIX = "https://doi.org/"
 REQUEST_DELAY_SECONDS = 0.3
-
-
-def normalize_doi(url: str) -> str:
-    """'https://doi.org/10.1128/MSphere.00109-24' -> '10.1128/msphere.00109-24'"""
-    doi = url.strip()
-    if doi.lower().startswith(DOI_PREFIX):
-        doi = doi[len(DOI_PREFIX) :]
-    return doi.lower()
 
 
 def main() -> None:
