@@ -54,3 +54,18 @@ warn_unused_configs = true
 module = ["faiss", "sentence_transformers", "sentence_transformers.*", "pyarrow", "pyarrow.*", "rank_bm25"]
 ignore_missing_imports = true
 
+[project.optional-dependencies]
+# PyTorch variant: CUDA build from PyPI locally, CPU-only build in the API container.
+cpu = ["torch"]
+gpu = ["torch"]
+
+[tool.uv]
+conflicts = [[{ extra = "cpu" }, { extra = "gpu" }]]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", extra = "cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
