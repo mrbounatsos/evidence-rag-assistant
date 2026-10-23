@@ -81,7 +81,7 @@ The original plan finished retrieval benchmarking (Module 3) before building ans
 - [x] Three evaluation modes: normal, source removed, closed book
 - [x] Retrieval and answer metrics; full configuration recorded with every run
 - [x] **Baseline on the tune split** — 84% accuracy, 97% precision
-- [ ] **Baseline on the test split**
+- [x] **Baseline on the test split**
 - [ ] Hybrid retrieval vs. baseline, on tune, then confirmed on test
 - [ ] Automatic check that cited passages support their claims
 - [ ] Harder setting with similar distractor papers
