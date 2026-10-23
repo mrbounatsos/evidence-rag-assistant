@@ -27,7 +27,7 @@ class Retriever:
         self,
         chunks_path: Path = CHUNKS_PATH,
         index_dir: Path = INDEX_DIR,
-        mode: str = "dense",
+        mode: str = "hybrid",
     ):
         meta = json.loads((index_dir / "dense_meta.json").read_text(encoding="utf-8"))
         self.meta: dict[str, Any] = meta

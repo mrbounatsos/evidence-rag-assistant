@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
-    parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default="dense")
+    parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default="hybrid")
     args = parser.parse_args()
 
     with BENCHMARK_PATH.open(encoding="utf-8") as handle:
@@ -46,7 +46,9 @@ def main() -> None:
     if retriever.stale:
         sys.exit("The index is stale (chunks changed since it was built). Rebuild it first.")
 
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"_{args.split}_{args.retrieval}"
+    run_id = (
+        datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"_{args.split}_{args.retrieval}_k{args.k}"
+    )
     run_dir = RESULTS_DIR / run_id
     run_dir.mkdir(parents=True)
     config = {
@@ -54,6 +56,7 @@ def main() -> None:
         "n_questions": len(items),
         "modes": args.modes,
         "k": args.k,
+        "retrieval": args.retrieval,
         "min_retrieval_score": MIN_RETRIEVAL_SCORE,
         "llm": OLLAMA_MODEL,
         "embedding_model": retriever.meta["model"],
