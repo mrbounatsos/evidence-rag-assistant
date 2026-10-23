@@ -60,9 +60,10 @@ The original plan finished retrieval benchmarking (Module 3) before building ans
 
 - [x] Dense (embedding) retrieval
 - [x] Exclusion of selected papers, used for unanswerable-question evaluation
-- [ ] **Keyword search (BM25)** — next
-- [ ] **Hybrid retrieval** combining keyword and embedding search
-- [ ] Limit on chunks per paper, for more diverse results
+- [x] Keyword search (BM25) — next
+- [x] Hybrid retrieval combining keyword and embedding search
+- [x] Limit on chunks per paper, for more diverse results
+- [x] Retrieve 8 passages instead of 5 (experiment 1)
 - [ ] Optional reranking of retrieved passages
 
 ## 4 · Grounded answers with citations and abstention ✅

@@ -64,9 +64,11 @@ Evaluated on **LitQA2**, an expert-written benchmark of questions about recent b
 
 | Mode | Accuracy | Precision | What it tests |
 |---|---|---|---|
-| 🔎 **With retrieval** | **84%** | **97%** | Finding and using the right evidence |
-| 🚫 **Source paper removed** | — | — | Declined **38 / 38** — no invented answers |
-| 🧠 **Closed book** (no sources) | 11% | 44% | What the model knows from memory |
+| 🔎 **With retrieval** (hybrid, 8 passages) | **90%** | **96%** | Finding and using the right evidence |
+| 🚫 **Source paper removed** | — | — | Declined **51 / 51** — no invented answers |
+| 🧠 **Closed book** (no sources) | 16% | 36% | What the model knows from memory |
+
+Hybrid retrieval (keyword + embedding search) and retrieving 8 passages instead of 5 raised accuracy from 78% to 90% over the original embedding-only baseline, mainly by finding the passage containing the answer far more often (78% → 96%).
 
 > **Read this carefully:** these numbers come from a closed corpus of 138 papers that contains each question's source paper. They are **not** comparable with open-literature LitQA2 results, where the right paper must first be found among millions. Details in the [report](docs/REPORT.md#13-baseline-results).
 
