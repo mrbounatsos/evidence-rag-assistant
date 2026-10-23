@@ -3,6 +3,7 @@
 import sys
 
 from evidence_rag_assistant.retrieval.retriever import Retriever
+from evidence_rag_assistant.settings import get_settings
 
 
 def main() -> None:
@@ -10,7 +11,8 @@ def main() -> None:
         sys.exit('Usage: uv run python scripts/search.py "your question" [k]')
     k = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 
-    retriever = Retriever()
+    settings = get_settings()
+    retriever = Retriever(settings.chunks_path, settings.index_dir, mode=settings.retrieval_mode)
     if retriever.stale:
         print("Warning: chunks.jsonl changed since the index was built. Rebuild it.\n")
 

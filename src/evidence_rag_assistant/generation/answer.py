@@ -1,25 +1,16 @@
-"""Grounded answer generation with a local LLM via Ollama.
+"""Grounded answer generation.
 
-The model answers only from numbered sources, cites them as [n], and replies
-with a fixed sentence when the sources are insufficient. Questions whose best
-retrieved chunk scores below a threshold are abstained on without calling the
-model. Citations in the answer are validated against the sources provided.
+The model answers only from numbered sources, cites them as [n], and replies with
+a fixed sentence when the sources are insufficient. Questions whose best retrieved
+chunk scores below a threshold are abstained on without calling the model.
+Citations in the answer are validated against the sources provided.
 """
 
-import json
-import os
 import re
 from dataclasses import dataclass, field
-from urllib.request import Request, urlopen
 
+from evidence_rag_assistant.generation.llm import LLM
 from evidence_rag_assistant.retrieval.retriever import RetrievedChunk, Retriever
-
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:8b")
-
-# Provisional: between off-topic (~0.43) and on-topic (~0.82+) scores seen so far.
-# To be calibrated with the benchmark.
-MIN_RETRIEVAL_SCORE = 0.6
 
 ABSTAIN_MESSAGE = "I cannot answer this from the provided sources."
 
@@ -42,7 +33,6 @@ SYSTEM_PROMPT = "\n".join(
 )
 
 _CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
-_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -79,48 +69,16 @@ def is_abstention(text: str) -> bool:
     return ABSTAIN_MESSAGE.lower() in text.lower()
 
 
-def generate(
-    system: str,
-    user: str,
-    model: str = OLLAMA_MODEL,
-    base_url: str = OLLAMA_BASE_URL,
-    timeout: float = 300,
-) -> str:
-    """Send one chat request to Ollama and return the answer text."""
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "stream": False,
-        "think": False,
-        "options": {"temperature": 0, "num_ctx": 8192},
-    }
-    request = Request(
-        f"{base_url}/api/chat",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-    )
-    with urlopen(request, timeout=timeout) as response:
-        data = json.load(response)
-    content: str = data["message"]["content"]
-    # Defensive: drop any reasoning block if the model emits one anyway.
-    return _THINK_BLOCK.sub("", content).strip()
-
-
 def answer_question(
-    question: str,
-    retriever: Retriever,
-    k: int = 8,
-    min_score: float = MIN_RETRIEVAL_SCORE,
+    question: str, retriever: Retriever, llm: LLM, k: int, min_score: float
 ) -> Answer:
+    """Retrieve, gate on the best retrieval score, generate, and validate citations."""
     sources = retriever.retrieve(question, k)
     top_score = max((s.score for s in sources), default=0.0)
     if top_score < min_score:
         return Answer(question, ABSTAIN_MESSAGE, "abstained_low_retrieval", top_score, sources)
 
-    text = generate(SYSTEM_PROMPT, build_prompt(question, sources))
+    text = llm.generate(SYSTEM_PROMPT, build_prompt(question, sources))
     if is_abstention(text):
         return Answer(question, text, "abstained_by_model", top_score, sources)
 

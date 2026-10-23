@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from evidence_rag_assistant.evaluation.litqa2 import MODES, run_question, summarize
-from evidence_rag_assistant.generation.answer import MIN_RETRIEVAL_SCORE, OLLAMA_MODEL
+from evidence_rag_assistant.generation.llm import create_llm
 from evidence_rag_assistant.retrieval.retriever import RETRIEVAL_MODES, Retriever
+from evidence_rag_assistant.settings import get_settings
 
 BENCHMARK_PATH = Path("data/processed/litqa2_benchmark.jsonl")
 RESULTS_DIR = Path("experiments/results")
@@ -30,19 +31,21 @@ def git_state() -> dict[str, Any]:
 
 
 def main() -> None:
+    settings = get_settings()
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choices=["tune", "test"], required=True)
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--k", type=int, default=8)
+    parser.add_argument("--k", type=int, default=settings.k)
+    parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default=settings.retrieval_mode)
     parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
-    parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default="hybrid")
     args = parser.parse_args()
 
     with BENCHMARK_PATH.open(encoding="utf-8") as handle:
         items = [json.loads(line) for line in handle if line.strip()]
     items = [item for item in items if item["split"] == args.split][: args.limit]
 
-    retriever = Retriever(mode=args.retrieval)
+    retriever = Retriever(settings.chunks_path, settings.index_dir, mode=args.retrieval)
+    llm = create_llm(settings)
     if retriever.stale:
         sys.exit("The index is stale (chunks changed since it was built). Rebuild it first.")
 
@@ -57,8 +60,8 @@ def main() -> None:
         "modes": args.modes,
         "k": args.k,
         "retrieval": args.retrieval,
-        "min_retrieval_score": MIN_RETRIEVAL_SCORE,
-        "llm": OLLAMA_MODEL,
+        "min_retrieval_score": settings.min_retrieval_score,
+        "llm": llm.model,
         "embedding_model": retriever.meta["model"],
         "chunks_sha256": retriever.meta["chunks_sha256"],
         "git": git_state(),
@@ -71,7 +74,9 @@ def main() -> None:
     with (run_dir / "results.jsonl").open("w", encoding="utf-8") as out:
         for item in items:
             for mode in args.modes:
-                result = run_question(item, retriever, mode, k=args.k)
+                result = run_question(
+                    item, retriever, llm, mode, k=args.k, min_score=settings.min_retrieval_score
+                )
                 results.append(result)
                 out.write(json.dumps(result, ensure_ascii=False) + "\n")
                 out.flush()

@@ -11,12 +11,8 @@ from collections import Counter
 from statistics import mean
 from typing import Any
 
-from evidence_rag_assistant.generation.answer import (
-    MIN_RETRIEVAL_SCORE,
-    build_prompt,
-    generate,
-    parse_citations,
-)
+from evidence_rag_assistant.generation.answer import build_prompt, parse_citations
+from evidence_rag_assistant.generation.llm import LLM, GenerationError
 from evidence_rag_assistant.retrieval.retriever import RetrievedChunk, Retriever
 
 MODES = ("rag", "source_removed", "closed_book")
@@ -112,9 +108,10 @@ def _grade(result: dict[str, Any]) -> dict[str, Any]:
 def run_question(
     item: dict[str, Any],
     retriever: Retriever,
+    llm: LLM,
     mode: str,
-    k: int = 5,
-    min_score: float = MIN_RETRIEVAL_SCORE,
+    k: int,
+    min_score: float,
 ) -> dict[str, Any]:
     """Run one benchmark question in one mode and grade it."""
     result: dict[str, Any] = {
@@ -146,7 +143,13 @@ def run_question(
             return _grade(result)
         system = RAG_SYSTEM_PROMPT
 
-    text = generate(system, build_mc_prompt(item["question"], item["options"], sources))
+    try:
+        text = llm.generate(system, build_mc_prompt(item["question"], item["options"], sources))
+    except GenerationError as error:
+        result.update(choice=None, raw_answer="", error=str(error))
+        result["outcome"] = "error"
+        result["is_expected"] = False
+        return result
     result["raw_answer"] = text
     result["choice"] = parse_choice(text, set(item["options"]))
     if sources is not None:
