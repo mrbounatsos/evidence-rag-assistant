@@ -33,7 +33,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choices=["tune", "test"], required=True)
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--k", type=int, default=5)
+    parser.add_argument("--k", type=int, default=8)
     parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
     parser.add_argument("--retrieval", choices=RETRIEVAL_MODES, default="hybrid")
     args = parser.parse_args()

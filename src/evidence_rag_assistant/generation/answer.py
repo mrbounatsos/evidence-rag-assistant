@@ -112,7 +112,7 @@ def generate(
 def answer_question(
     question: str,
     retriever: Retriever,
-    k: int = 5,
+    k: int = 8,
     min_score: float = MIN_RETRIEVAL_SCORE,
 ) -> Answer:
     sources = retriever.retrieve(question, k)
