@@ -7,6 +7,7 @@
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/managed%20with-uv-DE5FE9)
 ![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)
+![CI](https://github.com/mrbounatsos/evidence-rag-assistant/actions/workflows/ci.yml/badge.svg)
 ![mypy](https://img.shields.io/badge/types-mypy-2A6DB2)
 ![Ollama](https://img.shields.io/badge/LLM-Qwen3%208B%20via%20Ollama-000000?logo=ollama&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
@@ -96,7 +97,7 @@ Full checklist: **[docs/ROADMAP.md](docs/ROADMAP.md)**
 ```bash
 git clone git@github.com:mrbounatsos/evidence-rag-assistant.git
 cd evidence-rag-assistant
-uv sync
+uv sync --extra gpu
 
 # Build the corpus (downloads and verifies papers)
 uv run python scripts/discover_europe_pmc.py
@@ -136,6 +137,18 @@ tests/             offline tests built from real-data patterns
 notebooks/         decisions, with the evidence behind them
 docs/              report and roadmap
 ```
+
+## 🐳 Run with Docker
+
+The API and the model server run as two containers. The corpus and index are built locally first (see Quickstart) and mounted read-only.
+
+```bash
+docker compose up -d
+docker compose exec ollama ollama pull qwen3:8b   # first run only
+curl -s localhost:8000/health
+```
+
+Interactive API documentation: http://localhost:8000/docs
 
 ## 📖 Documentation
 

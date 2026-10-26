@@ -56,7 +56,7 @@ The original plan finished retrieval benchmarking (Module 3) before building ans
 - [x] BGE embeddings and exact FAISS index
 - [x] Stale-index detection
 
-## 3 · Retrieval and benchmarking 🚧
+## 3 · Retrieval and benchmarking ✅
 
 - [x] Dense (embedding) retrieval
 - [x] Exclusion of selected papers, used for unanswerable-question evaluation
@@ -87,11 +87,11 @@ The original plan finished retrieval benchmarking (Module 3) before building ans
 - [ ] Automatic check that cited passages support their claims
 - [ ] Harder setting with similar distractor papers
 
-## 6 · API 📋
+## 6 · API ✅
 
-- [ ] FastAPI service exposing search and question answering
-- [ ] Pydantic models for requests, answers, citations and statuses
-- [ ] Health check and configuration through environment variables
+- [x] FastAPI service exposing search and question answering
+- [x] Pydantic models for requests, answers, citations and statuses
+- [x] Health check and configuration through environment variables
 
 ## 7 · User interface 📋
 
@@ -100,9 +100,9 @@ The original plan finished retrieval benchmarking (Module 3) before building ans
 
 ## 8 · Packaging, Docker, CI, documentation 📋
 
-- [ ] Docker images for the API and the model server; Docker Compose for local use
-- [ ] GitHub Actions: lint, type check and tests on every push
-- [ ] Offline mode by default after first download
+- [x] Docker images for the API and the model server; Docker Compose for local use
+- [x] GitHub Actions: lint, type check and tests on every push
+- [x] Offline mode by default after first download
 - [ ] Troubleshooting notes (including the WSL memory issue)
 - [ ] Code licence and contribution notes
 
