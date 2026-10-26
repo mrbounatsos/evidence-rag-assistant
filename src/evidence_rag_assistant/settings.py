@@ -33,6 +33,8 @@ class Settings(BaseSettings):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
+    llm_auth: Literal["none", "google_id_token"] = "none"
+
     @property
     def chunks_path(self) -> Path:
         return self.data_dir / "processed" / "chunks.jsonl"
