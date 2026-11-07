@@ -1,8 +1,6 @@
+# EvidenceRAG
+
 <div align="center">
-
-# 🔬 EvidenceRAG
-
-### A local-first research assistant that answers from biomedical papers — with citations, or not at all.
 
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![uv](https://img.shields.io/badge/managed%20with-uv-DE5FE9)
@@ -14,152 +12,147 @@
 
 </div>
 
----
+EvidenceRAG is a local retrieval-augmented generation (RAG) system for answering questions about biomedical research papers. It retrieves relevant passages from a curated literature corpus, generates answers with source citations, and abstains when the retrieved evidence is insufficient.
 
-## ✨ What it does
+The project covers the full pipeline, from acquiring and processing scientific papers to retrieval, answer generation, and benchmark evaluation. Inference runs locally using open-source models; no hosted LLM API is required.
 
-Ask a question about the research literature. EvidenceRAG searches a corpus of licence-verified papers, hands the most relevant passages to a local language model, and returns an answer where **every claim cites its source** — or says plainly that **the evidence isn't there**.
-
-```text
-$ uv run python scripts/ask.py "What was the serum half-life of DyAb-designed antibodies in mice?"
-
-Status: abstained_by_model (top retrieval score 0.784)
-
-I cannot answer this from the provided sources. The sources do not mention
-the serum half-life of DyAb-designed antibodies in mice.
-```
-
-Knowing when *not* to answer is a feature, not a failure.
-
-## 🧭 Principles
-
-- 🏠 **Local and free** — runs offline on a laptop after the initial downloads. No paid APIs.
-- ⚖️ **Licences verified, not assumed** — every paper's licence is checked against the article itself. Article text is never published.
-- 🔗 **Traceable** — every cited passage leads back to its paper, its licence and the exact verified file.
-- 📏 **Measured** — decisions are backed by data, and results are reported with the conditions that produced them.
-
-## ⚙️ How it works
+## System overview
 
 ```mermaid
 flowchart LR
-    A[📚 Find papers<br/>Europe PMC] --> B[⚖️ Verify licences<br/>and download]
-    B --> C[🧹 Extract clean text]
-    C --> D[✂️ Chunk]
-    D --> E[🧮 Embed and index]
-    E --> F[🔎 Retrieve]
-    F --> G[🤖 Cited answer<br/>or abstention]
+    A[Europe PMC] --> B[Licence verification and ingestion]
+    B --> C[Text extraction and chunking]
+    C --> D[Embeddings and search index]
+    D --> E[Passage retrieval]
+    E --> F[Qwen3 via Ollama]
+    F --> G[Cited answer or abstention]
 ```
 
-| Stage | Approach |
-|---|---|
-| Corpus | Open-access papers from Europe PMC, licence-verified from each article's own XML |
-| Extraction | Sections classified by content, not position; references and admin sections excluded |
-| Chunking | ~300-word, section-aware chunks with title and section context |
-| Retrieval | `bge-small-en-v1.5` embeddings, exact FAISS search |
-| Generation | Qwen3 8B via Ollama, numbered sources, strict grounding rules |
-| Abstention | Off-topic threshold **and** model-level refusal for unanswerable questions |
+| Component | Implementation |
+| --- | --- |
+| Data source | Europe PMC open-access biomedical articles |
+| Ingestion | Article-level licence verification, full-text XML parsing, and file provenance tracking |
+| Preprocessing | Section-aware text extraction and approximately 300-word chunks |
+| Embeddings | `BAAI/bge-small-en-v1.5` |
+| Retrieval | FAISS dense search; hybrid keyword and semantic retrieval evaluated |
+| Generation | Qwen3 8B served locally through Ollama |
+| Grounding | Passage-level source references, citation validation, and abstention handling |
+| Evaluation | LitQA2 benchmark with retrieval and no-source controls |
 
-## 📊 Results so far
+The ingestion pipeline verifies article licences against the full-text XML rather than relying solely on search metadata. It excludes references and administrative sections from the searchable text and records provenance for the documents used to build the index. Article text and derived indexes are stored locally and are not committed to the repository.
 
-Evaluated on **LitQA2**, an expert-written benchmark of questions about recent biology papers, using the 38-question tuning split.
+During generation, retrieved passages are passed to the model as numbered sources. The system validates citation references in the response and distinguishes answers from abstentions and ungrounded outputs. A retrieval-score threshold handles clearly off-topic questions; the model is also instructed to abstain when topically relevant passages do not contain the requested information.
 
-| Mode | Accuracy | Precision | What it tests |
-|---|---|---|---|
-| 🔎 **With retrieval** (hybrid, 8 passages) | **90%** | **96%** | Finding and using the right evidence |
-| 🚫 **Source paper removed** | — | — | Declined **51 / 51** — no invented answers |
-| 🧠 **Closed book** (no sources) | 16% | 36% | What the model knows from memory |
+## Evaluation
 
-Hybrid retrieval (keyword + embedding search) and retrieving 8 passages instead of 5 raised accuracy from 78% to 90% over the original embedding-only baseline, mainly by finding the passage containing the answer far more often (78% → 96%).
+The system was evaluated using the 38-question tuning split of **LitQA2**, part of the [LAB-Bench](https://huggingface.co/datasets/futurehouse/lab-bench) benchmark for scientific literature question answering.
 
-> **Read this carefully:** these numbers come from a closed corpus of 138 papers that contains each question's source paper. They are **not** comparable with open-literature LitQA2 results, where the right paper must first be found among millions. Details in the [report](docs/REPORT.md#13-baseline-results).
+| Configuration | Accuracy | Precision |
+| --- | ---: | ---: |
+| Hybrid retrieval, 8 passages | **90%** | **96%** |
+| Initial dense-retrieval baseline | 78% | — |
+| Closed-book model, without retrieved sources | 16% | 36% |
 
-## 🗺️ Progress
+Combining keyword and embedding-based retrieval and increasing the number of passages from five to eight improved measured accuracy from 78% to 90%. The rate of retrieving an answer-containing passage increased from 78% to 96%.
 
-| | Module | Status |
-|---|---|---|
-| 0 | Environment and repository | ✅ |
-| 1 | Data ingestion | ✅ |
-| 2 | Chunking and indexing | ✅ |
-| 3 | Retrieval and benchmarking | 🚧 hybrid search next |
-| 4 | Grounded answers with citations and abstention | ✅ |
-| 5 | Evaluation | 🚧 baseline measured |
-| 6 | API | 📋 |
-| 7 | User interface | 📋 |
-| 8 | Packaging, Docker, CI | 📋 |
-| 9 | Cloud deployment (GCP) | 💤 optional |
+In a separate no-source experiment, the source paper was removed from the corpus. The system abstained on all **51 of 51** evaluated questions.
 
-Full checklist: **[docs/ROADMAP.md](docs/ROADMAP.md)**
+**Evaluation scope:** These experiments use a closed corpus of 138 papers containing the source article for each answerable benchmark question. Results therefore measure retrieval and answer generation within a known collection, not the ability to discover relevant papers across the entire biomedical literature. The sample is also small, so these figures should not be interpreted as general-purpose performance estimates.
 
-## 🚀 Quickstart
+Experimental setup, analysis, and limitations are documented in the [project report](docs/REPORT.md).
 
-**Requirements:** Python 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com) with the model pulled (`ollama pull qwen3:8b`). A GPU is recommended.
+## Getting started
+
+### Requirements
+
+- Python 3.12
+- [`uv`](https://docs.astral.sh/uv/)
+- [Ollama](https://ollama.com) with the `qwen3:8b` model
+- A GPU is recommended for local inference
+
+Clone the repository and install the dependencies:
 
 ```bash
-git clone git@github.com:mrbounatsos/evidence-rag-assistant.git
+git clone https://github.com/mrbounatsos/evidence-rag-assistant.git
 cd evidence-rag-assistant
 uv sync --extra gpu
+ollama pull qwen3:8b
+```
 
-# Build the corpus (downloads and verifies papers)
+### Prepare the corpus
+
+Run the ingestion scripts to discover papers, resolve benchmark references, and fetch licence-verified full text:
+
+```bash
 uv run python scripts/discover_europe_pmc.py
 uv run python scripts/download_litqa2.py
 uv run python scripts/resolve_litqa2.py
 uv run python scripts/fetch_fulltext.py
+```
 
-# Extract, chunk and index
+Extract the article text, build chunks, and generate the search index:
+
+```bash
 uv run python scripts/extract_text.py
 uv run python scripts/build_chunks.py
 uv run python scripts/build_index.py
+```
 
-# Ask
+### Ask a question
+
+Ensure Ollama is running, then use the command-line interface:
+
+```bash
 uv run python scripts/ask.py "How does DyAb predict antibody properties with little data?"
 ```
 
-**Evaluate** on the LitQA2 tuning split:
+If the retrieved passages do not support an answer, the system returns an abstention instead of a generated response presented as fact.
+
+### Reproduce the evaluation
 
 ```bash
 uv run python scripts/build_litqa2_benchmark.py
 uv run python scripts/evaluate_litqa2.py --split tune
 ```
 
-> **Running under WSL?** Long evaluation runs can exhaust memory through Ollama's prompt cache. Disable it in the Ollama service configuration with `LLAMA_ARG_CACHE_RAM=0`.
+For long evaluation runs under WSL, Ollama's prompt cache may cause excessive memory use. The project documents the `LLAMA_ARG_CACHE_RAM=0` setting and the reason for using it in the [report](docs/REPORT.md).
 
-## 📁 Repository layout
+## Docker
 
-```text
-src/evidence_rag_assistant/
-    ingestion/     finding papers, verifying licences, extracting text
-    indexing/      chunking and embeddings
-    retrieval/     searching the index
-    generation/    grounded answers with citations
-    evaluation/    LitQA2 benchmark harness
-scripts/           one entry point per pipeline step
-tests/             offline tests built from real-data patterns
-notebooks/         decisions, with the evidence behind them
-docs/              report and roadmap
-```
-
-## 🐳 Run with Docker
-
-The API and the model server run as two containers. The corpus and index are built locally first (see Quickstart) and mounted read-only.
+The repository includes a Docker Compose configuration with separate containers for the API and Ollama. Build the corpus and index locally before starting the services; the `data/` directory is mounted read-only inside the API container.
 
 ```bash
 docker compose up -d
-docker compose exec ollama ollama pull qwen3:8b   # first run only
-curl -s localhost:8000/health
+docker compose exec ollama ollama pull qwen3:8b
+curl http://localhost:8000/health
 ```
 
-Interactive API documentation: http://localhost:8000/docs
+API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs). The supplied Compose configuration requests an NVIDIA GPU for Ollama.
 
-## 📖 Documentation
+## Repository structure
 
-- **[Report](docs/REPORT.md)** — the ideas, decisions and methods behind every part of the system
-- **[Roadmap](docs/ROADMAP.md)** — progress and what comes next
-- **[Ingestion decisions notebook](notebooks/01_ingestion_decisions.ipynb)** — each data decision with its evidence
+```text
+src/evidence_rag_assistant/
+    ingestion/      Paper discovery, licence checks, and text extraction
+    indexing/       Chunking and embedding-based indexing
+    retrieval/      Passage search
+    generation/     Answer generation and citation handling
+    evaluation/     LitQA2 evaluation
+scripts/            Pipeline and CLI entry points
+tests/              Automated tests
+notebooks/          Data inspection and implementation decisions
+experiments/        Evaluation results
+docs/               Technical report and development roadmap
+```
 
-## 🙏 Acknowledgements
+## Documentation
 
-- [Europe PMC](https://europepmc.org) for open access to the biomedical literature
-- [FutureHouse](https://www.futurehouse.org) for LitQA2 ([LAB-Bench](https://huggingface.co/datasets/futurehouse/lab-bench), CC BY-SA 4.0)
-- [BAAI](https://huggingface.co/BAAI/bge-small-en-v1.5) for the BGE embedding models, and the [Qwen](https://github.com/QwenLM) team for Qwen3
+- [Technical report](docs/REPORT.md) — design decisions, experiments, evaluation methodology, and limitations
+- [Roadmap](docs/ROADMAP.md) — implementation status and planned work
+- [Ingestion analysis](notebooks/01_ingestion_decisions.ipynb) — evidence supporting corpus and preprocessing decisions
 
-Article texts and benchmark data are used locally under their respective licences and are not redistributed in this repository.
+## Data and attribution
+
+Scientific articles are retrieved from [Europe PMC](https://europepmc.org) and remain subject to their respective licences. Full-text articles and derived data are not redistributed through this repository.
+
+LitQA2 is provided by [FutureHouse](https://www.futurehouse.org) as part of [LAB-Bench](https://huggingface.co/datasets/futurehouse/lab-bench) (CC BY-SA 4.0). The project uses the [BGE embedding model](https://huggingface.co/BAAI/bge-small-en-v1.5) and [Qwen3](https://github.com/QwenLM) for local inference.
